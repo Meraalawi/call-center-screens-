@@ -130,13 +130,8 @@
           await loadBranches();
           if (state.step === 'branch') renderAgentView();
         } else if (state.step === 'order' && state.branchId) {
-          // Also refresh the branch list here (not just the menu) so a
-          // status change the branch makes mid-call — e.g. going from
-          // normal to busy — shows up live in the review modal without a
-          // second poll interval.
-          await Promise.all([loadMenu(state.branchId), loadBranches()]);
+          await loadMenu(state.branchId);
           renderAgentView();
-          if (state.reviewOpen) renderReviewModal();
         }
       } catch (err) {
         if (err.status === 401) { state.user = null; stopPolling(); render(); }
@@ -154,23 +149,15 @@
     else renderOrderScreen(root);
   }
 
-  function loadBadgeLabel(status) {
-    return status === 'very_busy' ? t('bsStatusVeryBusy') : status === 'busy' ? t('bsStatusBusy') : t('bsStatusNormal');
-  }
-
   function renderBranchSelect(root) {
-    const cards = state.branches.map((b) => {
-      const status = b.status || 'normal';
-      return `
+    const cards = state.branches.map((b) => `
       <button class="bs-card" data-branch-select="${b.id}">
         <span class="bs-tag">${t('bsBranchTag')}</span>
         <span class="bs-name">${window.FMT.escapeHtml(bName(b))}</span>
         <span class="bs-city">${window.FMT.escapeHtml(bCity(b))}</span>
-        <span class="status-load-badge load-${status}">${loadBadgeLabel(status)}</span>
         <span class="bs-meta">${t('bsItems', b.menuItemCount ?? '—')}</span>
         <span class="bs-cta">${t('bsCta')}</span>
-      </button>`;
-    }).join('');
+      </button>`).join('');
 
     root.innerHTML = `
       <div class="branch-select-screen">
@@ -308,20 +295,6 @@
     const total = state.cart.reduce((s, l) => s + l.priceCents * l.qty, 0);
     const addressMissing = state.orderType === 'delivery' && !state.deliveryAddress.trim();
 
-    // Crowding/lateness note: reads back literally to the customer, same
-    // red/yellow/green language as the branch picker badge and the Branch
-    // Screen's kanban columns. Normal status stays quiet — no need to
-    // clutter the modal when nothing's wrong.
-    const status = (branch && branch.status) || 'normal';
-    const loadNoteText = status === 'very_busy' ? t('reviewNoteVeryBusy', window.FMT.escapeHtml(bName(branch)))
-      : status === 'busy' ? t('reviewNoteBusy', window.FMT.escapeHtml(bName(branch)))
-      : '';
-    const loadNoteHtml = loadNoteText ? `
-      <div class="review-load-note load-${status}">
-        ${loadNoteText}
-        ${branch && branch.statusNote ? `<span class="rn-extra">${t('reviewBranchNoteLbl')}: ${window.FMT.escapeHtml(branch.statusNote)}</span>` : ''}
-      </div>` : '';
-
     modalRoot.innerHTML = `
       <div class="overlay" id="reviewOverlay">
         <div class="review-card" role="dialog" aria-label="Confirm order">
@@ -329,7 +302,6 @@
             <h2>${t('reviewTitle')}</h2>
             <div class="review-sub">${t('reviewSub', window.FMT.escapeHtml(bName(branch)))}</div>
           </div>
-          ${loadNoteHtml}
           <div class="review-block">
             ${state.cart.map((l) => `<div class="review-row"><span>${l.qty} × ${window.FMT.escapeHtml(LANG === 'ar' ? (l.nameAr || l.name) : l.name)}</span><span class="mono">${fmt(l.priceCents * l.qty)}</span></div>`).join('')}
             <div class="review-row" style="border-top:1px solid var(--border);padding-top:8px;font-weight:700;"><span>${t('total')}</span><span class="mono">${fmt(total)}</span></div>
