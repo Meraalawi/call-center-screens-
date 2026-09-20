@@ -112,6 +112,20 @@ if (!userColumns.includes('active')) {
   db.exec('ALTER TABLE users ADD COLUMN active INTEGER NOT NULL DEFAULT 1');
 }
 
+// Migration: `status`/`status_note` were added to `branches` after this
+// table already shipped, same reasoning and same pattern as `users.active`
+// above. status: 'normal' | 'busy' | 'very_busy' (set by the branch itself
+// from the Branch Screen, so the Call Center Desk can warn the customer
+// before an order is sent). status_note is a short optional free-text line
+// ("running ~20 min behind"); existing branches default to normal/no note.
+const branchColumns = db.prepare("PRAGMA table_info(branches)").all().map((c) => c.name);
+if (!branchColumns.includes('status')) {
+  db.exec("ALTER TABLE branches ADD COLUMN status TEXT NOT NULL DEFAULT 'normal'");
+}
+if (!branchColumns.includes('status_note')) {
+  db.exec("ALTER TABLE branches ADD COLUMN status_note TEXT NOT NULL DEFAULT ''");
+}
+
 // node:sqlite's DatabaseSync has no built-in .transaction() helper (unlike
 // better-sqlite3), so provide the same "run this function atomically" shape
 // used throughout the routes/seed code.
