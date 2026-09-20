@@ -19,6 +19,8 @@
     loginError: '',
     loginBusy: false,
     orders: [],
+    statusNoteDraft: '',
+    statusSaving: false,
   };
 
   function toast(msg) {
@@ -116,6 +118,7 @@
         const res = await API.post('/api/auth/branch/login', { branchId: state.pickedBranchId, password });
         state.user = res.user;
         state.branch = res.branch;
+        state.statusNoteDraft = res.branch.statusNote || '';
         await loadOrders();
       } catch (err) {
         state.loginError = err.network ? t('networkError') : t('loginErrorBranch');
@@ -132,15 +135,40 @@
     state.orders = res.orders;
   }
 
+  // Refresh this branch's own status/note (e.g. if an admin overrode it from
+  // the Dashboard). Only syncs the note draft when it hasn't been edited
+  // locally since the last known value, so it doesn't clobber an in-progress
+  // edit mid-typing.
+  async function loadOwnBranch() {
+    const res = await API.get('/api/branches');
+    const fresh = res.branches[0];
+    if (!fresh) return;
+    const draftIsStale = !state.branch || state.statusNoteDraft === (state.branch.statusNote || '');
+    state.branch = { ...state.branch, ...fresh };
+    if (draftIsStale) state.statusNoteDraft = fresh.statusNote || '';
+  }
+
   function startPolling() {
     stopPolling();
     pollTimer = setInterval(async () => {
-      try { await loadOrders(); renderCashView(); } catch (err) {
+      try { await loadOrders(); await loadOwnBranch(); renderCashView(); } catch (err) {
         if (err.status === 401) { state.user = null; state.branch = null; stopPolling(); render(); }
       }
     }, POLL_MS);
   }
   function stopPolling() { if (pollTimer) clearInterval(pollTimer); pollTimer = null; }
+
+  async function saveStatus(status) {
+    state.statusSaving = true; renderCashView();
+    try {
+      const res = await API.patch(`/api/branches/${state.branch.id}/status`, { status, statusNote: state.statusNoteDraft.trim() });
+      state.branch = { ...state.branch, ...res.branch };
+      state.statusNoteDraft = res.branch.statusNote || '';
+      toast(t('toastStatusSaved'));
+    } catch (err) { toast(err.message || t('networkError')); }
+    state.statusSaving = false;
+    renderCashView();
+  }
 
   // ---------------- kanban board ----------------
   function renderCashView() {
@@ -186,9 +214,20 @@
     const colHtml = (list, empty, nextLabel, nextStatus, cancelable) =>
       list.length ? list.map((o) => card(o, nextLabel, nextStatus, cancelable)).join('') : `<div class="col-empty">${empty}</div>`;
 
+    const statusValue = (state.branch && state.branch.status) || 'normal';
+    const segBtn = (val) => `<button type="button" class="load-${val}" data-set-status="${val}" aria-pressed="${statusValue === val}">${t(val === 'normal' ? 'statusNormal' : val === 'busy' ? 'statusBusy' : 'statusVeryBusy')}</button>`;
+
     root.innerHTML = `
       <div class="cash-head">
         <div class="cash-stats"><span>${t('activeCount', cols.new.length + cols.preparing.length + cols.ready.length)}</span><span>${t('completedTodayN', completedToday)}</span></div>
+        <div class="branch-status-control">
+          <label>${t('branchStatusLbl')}</label>
+          <div class="status-seg">${segBtn('normal')}${segBtn('busy')}${segBtn('very_busy')}</div>
+          <div class="status-note-row">
+            <input id="statusNoteInput" type="text" maxlength="200" placeholder="${t('statusNotePh')}" value="${window.FMT.escapeHtml(state.statusNoteDraft)}">
+            <button type="button" class="btn-text" id="saveStatusNoteBtn" ${state.statusSaving ? 'disabled' : ''}>${t('saveStatusBtn')}</button>
+          </div>
+        </div>
       </div>
       <div class="board">
         <div class="col col-new">
@@ -233,6 +272,12 @@
         renderCashView();
       } catch (err) { toast(err.message || t('networkError')); }
     }));
+
+    root.querySelectorAll('[data-set-status]').forEach((el) => el.addEventListener('click', () => saveStatus(el.dataset.setStatus)));
+    const noteInput = document.getElementById('statusNoteInput');
+    if (noteInput) noteInput.addEventListener('input', (e) => { state.statusNoteDraft = e.target.value; });
+    const saveNoteBtn = document.getElementById('saveStatusNoteBtn');
+    if (saveNoteBtn) saveNoteBtn.addEventListener('click', () => saveStatus(statusValue));
   }
 
   function findCode(id) { const o = state.orders.find((oo) => oo.id === id); return o ? o.code : id; }
@@ -263,6 +308,7 @@
       if (me.user && me.user.role === 'branch') {
         state.user = me.user;
         state.branch = me.branch;
+        state.statusNoteDraft = (me.branch && me.branch.statusNote) || '';
         await loadOrders();
         render();
         startPolling();

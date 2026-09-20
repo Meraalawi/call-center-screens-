@@ -198,6 +198,8 @@
           <td><input value="${escapeHtml(b.city)}" id="editCity_${b.id}"></td>
           <td class="num">${b.code}</td>
           <td class="num">${b.menuItemCount ?? '—'}</td>
+          <td><span class="status-pill ${b.active ? '' : 'off'}">${b.active ? t('active') : t('inactive')}</span></td>
+          <td>—</td>
           <td>
             <div class="row-actions">
               <button class="btn-text" data-save-branch="${b.id}">${LANG === 'ar' ? 'حفظ' : 'Save'}</button>
@@ -214,12 +216,24 @@
              <button class="btn-text" data-edit-branch="${b.id}">${t('edit')}</button>
              <button class="btn-text" data-delete-branch="${b.id}">${t('del')}</button>
            </div>`;
+      const status = b.status || 'normal';
+      const statusLabel = status === 'very_busy' ? t('statusVeryBusy') : status === 'busy' ? t('statusBusy') : t('statusNormal');
+      // Admin can override a branch's own self-reported load from here, same
+      // spirit as everything else admin already manages about branches;
+      // otherwise this column is read-only oversight.
+      const loadCell = `
+        <select class="load-select" data-set-branch-load="${b.id}">
+          <option value="normal" ${status === 'normal' ? 'selected' : ''}>${t('statusNormal')}</option>
+          <option value="busy" ${status === 'busy' ? 'selected' : ''}>${t('statusBusy')}</option>
+          <option value="very_busy" ${status === 'very_busy' ? 'selected' : ''}>${t('statusVeryBusy')}</option>
+        </select>`;
       return `<tr>
         <td>${escapeHtml(bName(b))}</td>
         <td>${escapeHtml(bCity(b))}</td>
         <td class="num">${b.code}</td>
         <td class="num">${b.menuItemCount ?? '—'}</td>
         <td><span class="status-pill ${b.active ? '' : 'off'}">${b.active ? t('active') : t('inactive')}</span></td>
+        <td><span class="status-load-badge load-${status}" title="${escapeHtml(b.statusNote || '')}">${statusLabel}</span> ${loadCell}</td>
         <td>${deleteCell}</td>
       </tr>`;
     }).join('');
@@ -227,8 +241,8 @@
     body.innerHTML = `
       ${addFormHtml}
       <div class="table-wrap"><table class="data">
-        <thead><tr><th>${t('thName')}</th><th>${t('thAddress')}</th><th>${t('thCode')}</th><th>${t('thItems')}</th><th>${t('thStatus')}</th><th></th></tr></thead>
-        <tbody>${rows || `<tr><td colspan="6"><div class="empty-state">${t('noBranchesYet')}</div></td></tr>`}</tbody>
+        <thead><tr><th>${t('thName')}</th><th>${t('thAddress')}</th><th>${t('thCode')}</th><th>${t('thItems')}</th><th>${t('thStatus')}</th><th>${t('thBranchLoad')}</th><th></th></tr></thead>
+        <tbody>${rows || `<tr><td colspan="7"><div class="empty-state">${t('noBranchesYet')}</div></td></tr>`}</tbody>
       </table></div>`;
 
     const addBtn = document.getElementById('addBranchBtn');
@@ -254,6 +268,14 @@
       const active = el.dataset.active === 'true';
       try {
         await API.put(`/api/branches/${id}`, { active: !active });
+        await loadBranches();
+        renderBranchesTab();
+      } catch (err) { toast(err.message || t('networkError')); }
+    }));
+    body.querySelectorAll('[data-set-branch-load]').forEach((el) => el.addEventListener('change', async () => {
+      const id = Number(el.dataset.setBranchLoad);
+      try {
+        await API.patch(`/api/branches/${id}/status`, { status: el.value });
         await loadBranches();
         renderBranchesTab();
       } catch (err) { toast(err.message || t('networkError')); }
