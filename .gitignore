@@ -1,4 +1,5 @@
 node_modules/
+package-lock.json
 data/*.sqlite
 data/*.sqlite-journal
 data/*.sqlite-wal
