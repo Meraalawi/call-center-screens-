@@ -204,6 +204,9 @@
   .order-card.status-new{border-width:1.5px;border-color:var(--border-strong);}
   .order-card.status-preparing{border-style:dashed;}
   .order-card.status-ready{background:var(--surface-2);}
+  .order-card.status-completed{opacity:.7;}
+  .order-card.status-cancelled{opacity:.55;text-decoration-color:var(--ink-3);}
+  .desk-tabs{margin-bottom:16px;}
   .oc-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px;}
   .oc-id{font-size:12.5px;font-weight:700;}
   .oc-time{font-size:11px;color:var(--ink-3);}

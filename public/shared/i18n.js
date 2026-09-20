@@ -78,6 +78,10 @@
       toastPasswordReset: (n) => `Password reset for ${n}`,
       toastUserActivated: (n) => `${n} reactivated`, toastUserDeactivated: (n) => `${n} deactivated`,
       toastUsernameTaken: "That username is already taken",
+      deskTabNew: 'New order', deskTabStatus: 'Order status',
+      myOrdersTitle: 'Your orders', myOrdersSub: 'Orders you’ve sent, with live status from the branch.',
+      myOrdersEmpty: 'You haven’t sent any orders yet.',
+      statusCompleted: 'Completed', statusCancelled: 'Cancelled',
     },
     ar: {
       brandTag: 'كيك وقهوة · لوحة مركز الاتصال',
@@ -155,6 +159,10 @@
       toastPasswordReset: (n) => `تمت إعادة تعيين كلمة مرور ${n}`,
       toastUserActivated: (n) => `تمت إعادة تفعيل ${n}`, toastUserDeactivated: (n) => `تم إيقاف ${n}`,
       toastUsernameTaken: 'اسم المستخدم هذا مستخدم بالفعل',
+      deskTabNew: 'طلب جديد', deskTabStatus: 'حالة الطلبات',
+      myOrdersTitle: 'طلباتك', myOrdersSub: 'الطلبات التي أرسلتها، مع حالتها الحية من الفرع.',
+      myOrdersEmpty: 'لم ترسل أي طلبات بعد.',
+      statusCompleted: 'مكتمل', statusCancelled: 'ملغى',
     },
   };
 

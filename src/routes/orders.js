@@ -34,9 +34,11 @@ function nextOrderCode(branch) {
 }
 
 function register(app) {
-  // Listing is for the branch kanban board and the dashboard's cross-branch
-  // table — not for agents (they only create orders, never browse them here).
-  app.get('/api/orders', requireRole('admin', 'branch'), (req, res) => {
+  // Listing serves the branch kanban board, the dashboard's cross-branch
+  // table, and an agent's own "Order Status" tab. An agent only ever sees
+  // orders they personally took (so they can answer a customer's follow-up
+  // call) — never another agent's or a full branch feed.
+  app.get('/api/orders', requireRole('admin', 'branch', 'agent'), (req, res) => {
     const user = req.session.user;
     let sql = 'SELECT * FROM orders WHERE 1=1';
     const params = [];
@@ -44,6 +46,9 @@ function register(app) {
     if (user.role === 'branch') {
       sql += ' AND branch_id = ?';
       params.push(user.branchId);
+    } else if (user.role === 'agent') {
+      sql += ' AND agent_id = ?';
+      params.push(user.id);
     } else if (req.query.branchId && req.query.branchId !== 'all') {
       sql += ' AND branch_id = ?';
       params.push(Number(req.query.branchId));
@@ -59,12 +64,13 @@ function register(app) {
     res.json({ orders: rows.map(orderWithItems) });
   });
 
-  app.get('/api/orders/:id', requireRole('admin', 'branch'), (req, res) => {
+  app.get('/api/orders/:id', requireRole('admin', 'branch', 'agent'), (req, res) => {
     const id = Number(req.params.id);
     const row = db.prepare('SELECT * FROM orders WHERE id = ?').get(id);
     if (!row) return res.status(404).json({ error: 'Order not found' });
     const user = req.session.user;
     if (user.role === 'branch' && row.branch_id !== user.branchId) return res.status(403).json({ error: 'Not allowed' });
+    if (user.role === 'agent' && row.agent_id !== user.id) return res.status(403).json({ error: 'Not allowed' });
     res.json({ order: orderWithItems(row) });
   });
 

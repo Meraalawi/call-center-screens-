@@ -4,7 +4,7 @@
 (function () {
   'use strict';
   const { t, setLanguage, applyDocumentDir } = window.I18N;
-  const { fmt } = window.FMT;
+  const { fmt, relTime } = window.FMT;
   let LANG = window.I18N.LANG;
 
   const POLL_MS = 4000;
@@ -14,6 +14,7 @@
     user: null,
     loginError: '',
     loginBusy: false,
+    tab: 'new', // 'new' | 'status' — which desk tab is showing
     branches: [],
     step: 'branch', // 'branch' | 'order'
     branchId: null,
@@ -23,6 +24,7 @@
     customerName: '', customerPhone: '', orderType: 'pickup', deliveryAddress: '', notes: '',
     reviewOpen: false, sending: false,
     ticketOpen: false,
+    orders: [], // this agent's own orders, for the "Order status" tab
   };
 
   function toast(msg) {
@@ -122,10 +124,20 @@
     state.menu = res.items;
   }
 
+  async function loadOrders() {
+    const res = await API.get('/api/orders');
+    state.orders = res.orders;
+  }
+
   function startPolling() {
     stopPolling();
     pollTimer = setInterval(async () => {
       try {
+        if (state.tab === 'status') {
+          await loadOrders();
+          if (state.tab === 'status') renderAgentView();
+          return;
+        }
         if (state.step === 'branch') {
           await loadBranches();
           if (state.step === 'branch') renderAgentView();
@@ -145,8 +157,57 @@
     document.getElementById('loginView').hidden = true;
     const root = document.getElementById('agentView');
     root.hidden = false;
-    if (state.step === 'branch') renderBranchSelect(root);
-    else renderOrderScreen(root);
+    root.innerHTML = `
+      <div class="tabs desk-tabs" role="tablist">
+        <button class="tab-btn" data-desk-tab="new" aria-selected="${state.tab === 'new'}">${t('deskTabNew')}</button>
+        <button class="tab-btn" data-desk-tab="status" aria-selected="${state.tab === 'status'}">${t('deskTabStatus')}</button>
+      </div>
+      <div id="deskContent"></div>`;
+    root.querySelectorAll('[data-desk-tab]').forEach((el) => el.addEventListener('click', () => {
+      const tab = el.dataset.deskTab;
+      if (tab === state.tab) return;
+      state.tab = tab;
+      if (tab === 'status') { loadOrders().then(renderAgentView).catch(() => renderAgentView()); return; }
+      renderAgentView();
+    }));
+    const content = document.getElementById('deskContent');
+    if (state.tab === 'status') renderOrderStatus(content);
+    else if (state.step === 'branch') renderBranchSelect(content);
+    else renderOrderScreen(content);
+  }
+
+  function renderOrderStatus(root) {
+    const statusMeta = {
+      new: { label: t('statusNew'), cls: 'status-new' },
+      preparing: { label: t('statusPrep'), cls: 'status-preparing' },
+      ready: { label: t('statusReady'), cls: 'status-ready' },
+      completed: { label: t('statusCompleted'), cls: 'status-completed' },
+      cancelled: { label: t('statusCancelled'), cls: 'status-cancelled' },
+    };
+    const cards = state.orders.map((o) => {
+      const branch = state.branches.find((b) => b.id === o.branchId);
+      const sm = statusMeta[o.status] || { label: o.status, cls: '' };
+      const itemsLine = o.items.map((it) => `${it.qty} × ${window.FMT.escapeHtml(LANG === 'ar' ? (it.nameAr || it.name) : it.name)}`).join(', ');
+      return `<div class="order-card ${sm.cls}">
+        <div class="oc-head"><span class="oc-id mono">${window.FMT.escapeHtml(o.code)}</span><span class="oc-time">${relTime(o.createdAt, LANG)}</span></div>
+        <div class="oc-status">${sm.label}</div>
+        <div class="oc-customer">${window.FMT.escapeHtml(o.customerName || t('notEntered'))}${branch ? ' · ' + window.FMT.escapeHtml(bName(branch)) : ''}</div>
+        <div class="oc-items">${window.FMT.escapeHtml(itemsLine)}</div>
+        <div class="oc-fulfil">${o.orderType === 'delivery' ? t('delivery') : t('pickup')}</div>
+        <div class="review-row" style="font-weight:700;"><span>${t('total')}</span><span class="mono">${fmt(o.totalCents)}</span></div>
+      </div>`;
+    }).join('');
+
+    root.innerHTML = `
+      <div class="branch-select-screen">
+        <div class="bs-head">
+          <h2>${t('myOrdersTitle')}</h2>
+          <div class="sub">${t('myOrdersSub')}</div>
+        </div>
+        <div class="menu-grid" style="grid-template-columns:repeat(auto-fill,minmax(240px,1fr));">
+          ${cards || `<div class="empty-state">${t('myOrdersEmpty')}</div>`}
+        </div>
+      </div>`;
   }
 
   function renderBranchSelect(root) {
