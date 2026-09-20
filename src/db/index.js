@@ -42,7 +42,8 @@ CREATE TABLE IF NOT EXISTS menu_items (
   category TEXT NOT NULL,
   category_ar TEXT NOT NULL DEFAULT '',
   price_cents INTEGER NOT NULL,
-  available INTEGER NOT NULL DEFAULT 1
+  available INTEGER NOT NULL DEFAULT 1,
+  image_url TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_menu_items_branch ON menu_items(branch_id);
 
@@ -120,6 +121,14 @@ if (!userColumns.includes('active')) {
 const orderColumns = db.prepare("PRAGMA table_info(orders)").all().map((c) => c.name);
 if (!orderColumns.includes('eta_minutes')) {
   db.exec('ALTER TABLE orders ADD COLUMN eta_minutes INTEGER');
+}
+
+// Migration: `image_url` — a relative path (e.g. /images/menu/latte.jpg) to a
+// product photo for a menu item, shown as a thumbnail on the order screen
+// and in the dashboard's menu list. NULL for items with no photo on file.
+const menuItemColumns = db.prepare("PRAGMA table_info(menu_items)").all().map((c) => c.name);
+if (!menuItemColumns.includes('image_url')) {
+  db.exec('ALTER TABLE menu_items ADD COLUMN image_url TEXT');
 }
 
 // node:sqlite's DatabaseSync has no built-in .transaction() helper (unlike

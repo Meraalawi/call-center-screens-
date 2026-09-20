@@ -286,8 +286,14 @@
         : qty > 0
           ? `<span class="stepper"><button data-dec="${m.id}" aria-label="Remove one">−</button><span class="qty">${qty}</span><button data-inc="${m.id}" aria-label="Add one">+</button></span>`
           : `<button class="add-btn" data-inc="${m.id}">${LANG === 'ar' ? 'إضافة' : 'Add'}</button>`;
+      const thumb = m.imageUrl
+        ? `<img class="item-thumb" src="${window.FMT.escapeHtml(m.imageUrl)}" alt="" loading="lazy">`
+        : `<div class="item-thumb item-thumb-empty" aria-hidden="true"></div>`;
       return `<div class="item-card ${!m.available ? 'unavailable' : ''}">
-          <div><div class="item-name">${window.FMT.escapeHtml(iName(m))}</div><div class="item-cat">${window.FMT.escapeHtml(LANG === 'ar' ? m.categoryAr : m.category)}</div></div>
+          <div class="item-card-top">
+            ${thumb}
+            <div><div class="item-name">${window.FMT.escapeHtml(iName(m))}</div><div class="item-cat">${window.FMT.escapeHtml(LANG === 'ar' ? m.categoryAr : m.category)}</div></div>
+          </div>
           <div class="item-row"><span class="item-price mono">${fmt(m.priceCents)}</span>${control}</div>
         </div>`;
     }).join('') || `<div class="empty-state">${t('noItemsInCat')}</div>`;

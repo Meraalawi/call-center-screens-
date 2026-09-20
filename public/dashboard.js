@@ -327,7 +327,11 @@
           </td>
         </tr>`;
       }
+      const thumb = m.imageUrl
+        ? `<img src="${escapeHtml(m.imageUrl)}" alt="" style="width:32px;height:32px;border-radius:6px;object-fit:cover;background:var(--surface-2);">`
+        : `<div style="width:32px;height:32px;border-radius:6px;background:var(--surface-2);"></div>`;
       return `<tr>
+        <td>${thumb}</td>
         <td>${escapeHtml(iName(m))}</td>
         <td>${escapeHtml(LANG === 'ar' ? m.categoryAr : m.category)}</td>
         <td class="num">${fmt(m.priceCents)}</td>
@@ -348,8 +352,8 @@
       </div>
       ${addFormHtml}
       <div class="table-wrap"><table class="data">
-        <thead><tr><th>${t('thItem')}</th><th>${t('thCategory')}</th><th>${t('thPrice')}</th><th></th></tr></thead>
-        <tbody>${rows || `<tr><td colspan="4"><div class="empty-state">${t('noItemsMenu')}</div></td></tr>`}</tbody>
+        <thead><tr><th></th><th>${t('thItem')}</th><th>${t('thCategory')}</th><th>${t('thPrice')}</th><th></th></tr></thead>
+        <tbody>${rows || `<tr><td colspan="5"><div class="empty-state">${t('noItemsMenu')}</div></td></tr>`}</tbody>
       </table></div>`;
 
     document.getElementById('menuBranchSelect').addEventListener('change', async (e) => {
@@ -554,12 +558,20 @@
     const list = state.orders.slice().sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     const statusLabel = { new: t('statusNew'), preparing: t('statusPrep'), ready: t('statusReady'), completed: LANG === 'ar' ? 'مكتمل' : 'Completed', cancelled: LANG === 'ar' ? 'ملغى' : 'Cancelled' };
 
+    // When a single branch is selected, everything on screen — the table
+    // rows (already scoped server-side by branchId) and the summary line —
+    // is about that branch only, so the redundant Branch column is dropped
+    // and the eyebrow names the branch instead of counting across all of them.
+    const filteredBranch = state.orderBranchFilter !== 'all'
+      ? state.branches.find((b) => String(b.id) === String(state.orderBranchFilter))
+      : null;
+
     const rows = list.map((o) => {
       const b = state.branches.find((bb) => bb.id === o.branchId);
       const itemsSummary = o.items.map((i) => `${i.qty}×${escapeHtml(LANG === 'ar' ? (i.nameAr || i.name) : i.name)}`).join(', ');
       return `<tr>
         <td class="num">${escapeHtml(o.code)}</td>
-        <td>${b ? escapeHtml(bName(b)) : '—'}</td>
+        ${filteredBranch ? '' : `<td>${b ? escapeHtml(bName(b)) : '—'}</td>`}
         <td>${escapeHtml(o.customerName || t('phoneOrder'))}</td>
         <td>${o.orderType === 'delivery' ? t('delivery') + (o.address ? ' — ' + escapeHtml(o.address) : '') : t('pickup')}</td>
         <td>${itemsSummary}</td>
@@ -570,6 +582,11 @@
         <td>${relTime(o.createdAt, LANG)}</td>
       </tr>`;
     }).join('');
+
+    const colCount = filteredBranch ? 9 : 10;
+    const summary = filteredBranch
+      ? t('activeOrdersForBranch', list.length, bName(filteredBranch))
+      : t('activeOrdersAcross', list.length, state.branches.length);
 
     body.innerHTML = `
       <div class="dash-toolbar">
@@ -584,11 +601,11 @@
             <option value="cancelled" ${state.orderStatusFilter === 'cancelled' ? 'selected' : ''}>${LANG === 'ar' ? 'ملغى' : 'Cancelled'}</option>
           </select>
         </div>
-        <span class="eyebrow">${t('activeOrdersAcross', list.length, state.branches.length)}</span>
+        <span class="eyebrow">${summary}</span>
       </div>
       <div class="table-wrap"><table class="data">
-        <thead><tr><th>${t('thOrder')}</th><th>${t('thBranch')}</th><th>${t('thCustomer')}</th><th>${t('thFulfillment')}</th><th>${t('thItemsCol')}</th><th>${t('thTotal')}</th><th>${t('thStatusCol')}</th><th>${t('thRegister')}</th><th>${t('thNote')}</th><th>${t('thAge')}</th></tr></thead>
-        <tbody>${rows || `<tr><td colspan="10"><div class="empty-state">${t('noOrdersMatch')}</div></td></tr>`}</tbody>
+        <thead><tr><th>${t('thOrder')}</th>${filteredBranch ? '' : `<th>${t('thBranch')}</th>`}<th>${t('thCustomer')}</th><th>${t('thFulfillment')}</th><th>${t('thItemsCol')}</th><th>${t('thTotal')}</th><th>${t('thStatusCol')}</th><th>${t('thRegister')}</th><th>${t('thNote')}</th><th>${t('thAge')}</th></tr></thead>
+        <tbody>${rows || `<tr><td colspan="${colCount}"><div class="empty-state">${t('noOrdersMatch')}</div></td></tr>`}</tbody>
       </table></div>`;
 
     document.getElementById('ordersBranchFilter').addEventListener('change', async (e) => { state.orderBranchFilter = e.target.value; await loadOrders(); renderOrdersTab(); });

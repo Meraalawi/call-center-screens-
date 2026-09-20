@@ -5,7 +5,7 @@ function publicItem(m) {
   return {
     id: m.id, branchId: m.branch_id, name: m.name, nameAr: m.name_ar,
     category: m.category, categoryAr: m.category_ar, priceCents: m.price_cents,
-    available: !!m.available,
+    available: !!m.available, imageUrl: m.image_url || null,
   };
 }
 
@@ -43,9 +43,9 @@ function register(app) {
     const id = Number(req.params.itemId);
     const existing = db.prepare('SELECT * FROM menu_items WHERE id = ?').get(id);
     if (!existing) return res.status(404).json({ error: 'Item not found' });
-    const { name, nameAr, category, categoryAr, priceCents, available } = req.body || {};
+    const { name, nameAr, category, categoryAr, priceCents, available, imageUrl } = req.body || {};
     db.prepare(`
-      UPDATE menu_items SET name = ?, name_ar = ?, category = ?, category_ar = ?, price_cents = ?, available = ? WHERE id = ?
+      UPDATE menu_items SET name = ?, name_ar = ?, category = ?, category_ar = ?, price_cents = ?, available = ?, image_url = ? WHERE id = ?
     `).run(
       name !== undefined ? String(name).trim() : existing.name,
       nameAr !== undefined ? nameAr : existing.name_ar,
@@ -53,6 +53,7 @@ function register(app) {
       categoryAr !== undefined ? categoryAr : existing.category_ar,
       priceCents !== undefined ? Math.round(Number(priceCents)) : existing.price_cents,
       available !== undefined ? (available ? 1 : 0) : existing.available,
+      imageUrl !== undefined ? (imageUrl || null) : existing.image_url,
       id
     );
     res.json({ item: publicItem(db.prepare('SELECT * FROM menu_items WHERE id = ?').get(id)) });

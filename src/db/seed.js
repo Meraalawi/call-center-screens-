@@ -8,11 +8,31 @@
 const { hashPassword } = require('../lib/password');
 const db = require('./index');
 
+// Product photos scraped from the live site (vanilla.ps) for the items that
+// are identical across every branch — Drinks & Desserts. Keyed by the English
+// name used below; items with no confident match on the live site (Vanilla
+// Milkshake, Fresh Orange Juice, Macaron) are simply left without one.
+const MENU_IMAGES = {
+  'Espresso': 'espresso', 'Cappuccino': 'cappuccino', 'Caffé Latte': 'caffe-latte',
+  'Spanish Latte': 'spanish-latte', 'Caffé Mocha': 'caffe-mocha', 'Caffé Americano': 'caffe-americano',
+  'Iced Latte': 'iced-latte', 'Ice Americano': 'ice-americano', 'Tea': 'tea',
+  'Hot Chocolate': 'hot-chocolate', 'Iced Tea Peach': 'iced-tea-peach',
+  'Baked Cheesecake': 'baked-cheesecake', 'Red Velvet': 'red-velvet', 'Tiramisu Cake Box': 'tiramisu-cake-box',
+  'Carrot Cake': 'carrot-cake', 'Chocolate Fudge': 'chocolate-fudge', 'Lotus Baked Cheesecake': 'lotus-baked-cheesecake',
+  'San Sebastian Cheesecake': 'san-sebastian-cheesecake', 'Crème Brûlée': 'creme-brulee',
+  'Nutella Croissant': 'nutella-croissant', 'Chocolate Chip Cookie': 'chocolate-chip-cookie',
+  'Om Ali': 'om-ali', 'Dream Kunafa': 'dream-kunafa', 'Apple Pie': 'apple-pie', 'Honey Cake': 'honey-cake',
+};
+
 function mk(groups) {
   const out = [];
   groups.forEach(([catEn, catAr, items]) => {
     items.forEach(([nameEn, nameAr, price]) => {
-      out.push({ name: nameEn, nameAr, category: catEn, categoryAr: catAr, priceCents: price * 100 });
+      const slug = MENU_IMAGES[nameEn];
+      out.push({
+        name: nameEn, nameAr, category: catEn, categoryAr: catAr, priceCents: price * 100,
+        imageUrl: slug ? `/images/menu/${slug}.jpg` : null,
+      });
     });
   });
   return out;
@@ -143,8 +163,8 @@ function seed() {
       INSERT INTO branches (code, name, name_ar, city, city_ar, active) VALUES (?, ?, ?, ?, ?, 1)
     `);
     const insertMenuItem = db.prepare(`
-      INSERT INTO menu_items (branch_id, name, name_ar, category, category_ar, price_cents, available)
-      VALUES (?, ?, ?, ?, ?, ?, 1)
+      INSERT INTO menu_items (branch_id, name, name_ar, category, category_ar, price_cents, available, image_url)
+      VALUES (?, ?, ?, ?, ?, ?, 1, ?)
     `);
     const insertCounter = db.prepare(`INSERT INTO branch_counters (branch_id, next_number) VALUES (?, ?)`);
     const insertUser = db.prepare(`
@@ -157,7 +177,7 @@ function seed() {
       const branchId = info.lastInsertRowid;
       branchIds[b.code] = branchId;
       for (const item of b.menu) {
-        insertMenuItem.run(branchId, item.name, item.nameAr, item.category, item.categoryAr, item.priceCents);
+        insertMenuItem.run(branchId, item.name, item.nameAr, item.category, item.categoryAr, item.priceCents, item.imageUrl || null);
       }
       insertCounter.run(branchId, b.startCounter);
 
