@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vanilla Console — Branch Screen</title>
+<meta name="description" content="Vanilla Cake & Coffee branch screen — kitchen/cashier kanban board.">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700;800&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="shared/styles.css">
+</head>
+<body>
+<div id="app">
+  <header class="top">
+    <div class="brand">
+      <span class="logo-mark">V</span>
+      <span class="brand-text">
+        <span class="brand-name">Vanilla</span>
+        <span class="brand-tag" id="brandTag"></span>
+      </span>
+    </div>
+    <div class="nav-right">
+      <span class="who-chip" id="whoChip" hidden></span>
+      <button class="logout-btn" id="logoutBtn" hidden></button>
+      <div class="lang-toggle" role="group" aria-label="Language">
+        <button class="lang-btn" id="langEnBtn" aria-pressed="true">EN</button>
+        <button class="lang-btn" id="langArBtn" aria-pressed="false">ع</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section id="loginView"></section>
+    <section id="cashView" hidden></section>
+  </main>
+</div>
+
+<div id="toast"><span class="tdot"></span><span id="toastText"></span><span id="toastAction"></span></div>
+
+<script src="shared/i18n.js"></script>
+<script src="shared/fmt.js"></script>
+<script src="shared/api.js"></script>
+<script src="branch.js"></script>
+</body>
+</html>
