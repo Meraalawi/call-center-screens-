@@ -49,6 +49,10 @@ CREATE INDEX IF NOT EXISTS idx_menu_items_branch ON menu_items(branch_id);
 -- role: 'agent' | 'admin' | 'branch'
 -- branch_id is only set for role='branch' (a shared, branch-level credential,
 -- not tied to an individual person).
+-- active: soft-delete flag for agent/admin accounts managed from the
+-- Dashboard's Users section (a deactivated user can't log in, and an
+-- existing session for one is rejected on its next request). Branch rows
+-- keep this at 1 always; branches are deactivated via branches.active instead.
 CREATE TABLE IF NOT EXISTS users (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   username TEXT NOT NULL UNIQUE,
@@ -56,6 +60,7 @@ CREATE TABLE IF NOT EXISTS users (
   role TEXT NOT NULL CHECK(role IN ('agent','admin','branch')),
   display_name TEXT NOT NULL,
   branch_id INTEGER REFERENCES branches(id) ON DELETE CASCADE,
+  active INTEGER NOT NULL DEFAULT 1,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
@@ -97,6 +102,15 @@ CREATE TABLE IF NOT EXISTS branch_counters (
 `;
 
 db.exec(SCHEMA);
+
+// Migration: `active` was added to `users` after this table already shipped.
+// CREATE TABLE IF NOT EXISTS above won't retrofit an existing table, so add
+// the column by hand when it's missing (existing rows default to active=1,
+// i.e. nobody already seeded gets silently locked out).
+const userColumns = db.prepare("PRAGMA table_info(users)").all().map((c) => c.name);
+if (!userColumns.includes('active')) {
+  db.exec('ALTER TABLE users ADD COLUMN active INTEGER NOT NULL DEFAULT 1');
+}
 
 // node:sqlite's DatabaseSync has no built-in .transaction() helper (unlike
 // better-sqlite3), so provide the same "run this function atomically" shape

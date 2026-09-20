@@ -10,6 +10,7 @@ const authRoutes = require('./src/routes/auth');
 const branchRoutes = require('./src/routes/branches');
 const menuRoutes = require('./src/routes/menu');
 const orderRoutes = require('./src/routes/orders');
+const userRoutes = require('./src/routes/users');
 
 const PORT = process.env.PORT || 3000;
 const SESSION_SECRET = process.env.SESSION_SECRET || 'vanilla-console-dev-secret-change-me';
@@ -30,6 +31,7 @@ authRoutes.register(app);
 branchRoutes.register(app);
 menuRoutes.register(app);
 orderRoutes.register(app);
+userRoutes.register(app);
 
 app.use(serveStatic(path.join(__dirname, 'public')));
 

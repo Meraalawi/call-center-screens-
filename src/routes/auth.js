@@ -23,6 +23,7 @@ function register(app) {
     if (!user || !verifyPassword(password || '', user.password_hash)) {
       return res.status(401).json({ error: 'Invalid agent username or password' });
     }
+    if (!user.active) return res.status(403).json({ error: 'This account has been deactivated' });
     req.session.user = publicUser(user);
     res.json({ user: req.session.user });
   });
@@ -33,6 +34,7 @@ function register(app) {
     if (!user || !verifyPassword(password || '', user.password_hash)) {
       return res.status(401).json({ error: 'Invalid admin username or password' });
     }
+    if (!user.active) return res.status(403).json({ error: 'This account has been deactivated' });
     req.session.user = publicUser(user);
     res.json({ user: req.session.user });
   });
@@ -62,6 +64,14 @@ function register(app) {
   app.get('/api/auth/me', (req, res) => {
     const user = req.session && req.session.user;
     if (!user) return res.status(401).json({ error: 'Not signed in' });
+    // Same deactivation re-check as requireRole: a session predating a
+    // deactivation must stop working on its very next request, not just on
+    // its next admin-gated call.
+    const row = db.prepare('SELECT active FROM users WHERE id = ?').get(user.id);
+    if (!row || !row.active) {
+      req.session.destroy();
+      return res.status(401).json({ error: 'This account has been deactivated' });
+    }
     let branch = null;
     if (user.role === 'branch' && user.branchId) {
       branch = db.prepare(`SELECT id, code, name, name_ar, city, city_ar, active FROM branches WHERE id = ?`).get(user.branchId);
