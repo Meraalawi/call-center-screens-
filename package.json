@@ -1,0 +1,15 @@
+{
+  "name": "vanilla-console",
+  "version": "1.0.0",
+  "description": "Vanilla Cake & Coffee call center console — call center desk, branch kanban screen, and admin dashboard.",
+  "private": true,
+  "main": "server.js",
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "seed": "node src/db/seed.js"
+  },
+  "dependencies": {}
+}
