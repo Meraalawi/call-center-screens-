@@ -38,6 +38,12 @@ These are printed in the server's startup log and shown as hints on each
 login form. Change them (or add real accounts) before using this anywhere
 beyond a demo.
 
+Agent accounts are no longer seed-script-only: the Dashboard's **Users**
+section lets an admin add, rename, reset the password of, and
+deactivate/reactivate agent accounts without touching the seed script or the
+database directly. Branch credentials and admin accounts still aren't
+created there on purpose — see "Users management" below.
+
 ## Important note on dependencies — read this first
 
 **This project has zero npm dependencies, on purpose, not by choice.** The
@@ -68,6 +74,55 @@ matches exactly what an Express + express-session + bcrypt version would
 look like — `req.session.user`, `requireRole()` middleware, etc. — so this
 is a substitution of *implementation*, not of *architecture*. Requires
 **Node.js 22.5+** for `node:sqlite` (tested on 22.22).
+
+## Users management (Dashboard → Users)
+
+Added after the initial build, at the stakeholder's request that the
+Dashboard manage users itself instead of accounts only existing via the
+seed script.
+
+- **Branch credentials are not a separate concept from `users`** — they're
+  already rows in the same table with `role = 'branch'` (see
+  `src/db/index.js`). So the Users list shows them too, read-only, with a
+  note that their password is reset from the Branches section
+  (`PUT /api/branches/:id`) — building a second edit path for the same rows
+  would just be a redundant way to get out of sync with itself.
+- **Only `agent` accounts are creatable/editable from this UI.** Admin
+  creation is deliberately left out of self-service: promoting someone to
+  admin is a bigger trust decision than adding a call-center agent, and
+  scope-creeping the Users form into an admin-creation tool wasn't asked
+  for. If a second admin is needed, add one via `src/db/seed.js` or directly
+  in SQLite, same as today.
+- **Deactivation is a soft delete**, via a new `users.active` column
+  (migrated in `src/db/index.js` with an `ALTER TABLE ... ADD COLUMN` guarded
+  by a `PRAGMA table_info` check, so it's safe to run against a database
+  that predates this column). A deactivated agent can't log in
+  (`POST /api/auth/agent/login` checks `active`), and — this is the part
+  that's easy to get wrong — an **already-open session for a
+  since-deactivated user is rejected on its very next request**, not just on
+  its next login attempt: both `requireRole()` and `GET /api/auth/me`
+  re-check the user's `active` flag against the database on every call and
+  destroy the session if it's now false. There's no hard-delete route, so an
+  agent who has orders attached via `orders.agent_id` is never at risk of a
+  dangling foreign key — the same guard-rail spirit as the active-order
+  check on branch delete, just structural here since the row is never
+  actually removed.
+- **If you have an existing `data/vanilla.sqlite` from before this
+  change**, you don't need to delete it — the migration above adds the
+  column in place on next boot. (The README's "seeds fresh on first run"
+  note still applies if you'd rather just wipe and reseed: delete
+  `data/vanilla.sqlite*` and restart.)
+- New endpoints, all admin-only via `requireRole('admin')`
+  (`src/routes/users.js`):
+  - `GET /api/users` — list every account (agent/admin/branch)
+  - `POST /api/users` — create an agent (`{username, displayName,
+    password}`); rejects an empty username/display name, a duplicate
+    username, or a password under 6 characters
+  - `PUT /api/users/:id` — rename an agent's display name (400 if the row
+    isn't an agent)
+  - `PATCH /api/users/:id/password` — reset an agent's password (same
+    length/role checks as create)
+  - `PATCH /api/users/:id/active` — deactivate/reactivate an agent
 
 ## Other calls made building this out
 
@@ -110,12 +165,13 @@ vanilla-console/
 │   │   ├── session.js          # express-session-shaped in-memory sessions
 │   │   └── password.js         # bcrypt-shaped password hashing (scrypt)
 │   ├── middleware/
-│   │   └── requireRole.js      # req.session.user.role gate, 401/403 JSON
+│   │   └── requireRole.js      # req.session.user.role gate, 401/403 JSON, re-checks active on every call
 │   └── routes/
 │       ├── auth.js              # /api/auth/{agent,branch,admin}/login, logout, me
 │       ├── branches.js          # /api/branches (list/create/update/delete-with-guard)
 │       ├── menu.js              # /api/branches/:id/menu, /api/menu/:itemId (CRUD)
-│       └── orders.js            # /api/orders (create/list/status/rung-in)
+│       ├── orders.js            # /api/orders (create/list/status/rung-in)
+│       └── users.js             # /api/users (admin-only agent account management)
 ├── public/
 │   ├── index.html               # links to the three apps
 │   ├── call-center.html + .js   # Call Center Desk (agent login)
@@ -136,7 +192,8 @@ vanilla-console/
   price_cents, available
 - `users` — username, password_hash, role (`agent` | `branch` | `admin`),
   display_name, branch_id (set only for `branch` role — a shared credential,
-  not an individual)
+  not an individual), active (soft-delete flag; agent/admin managed via the
+  Dashboard's Users section, branch rows always stay active)
 - `orders` — code, branch_id FK, agent_id FK (nullable), customer info,
   order_type, address, notes, status, rung_in, total_cents, created_at
 - `order_items` — order_id FK, name/name_ar/qty/price_cents **snapshotted**
@@ -166,6 +223,9 @@ server-side via `requireRole()` — not just hidden in the UI.
   validates availability, generates the order code
 - `PATCH /api/orders/:id/status`, `PATCH /api/orders/:id/rung-in` —
   admin/branch only, branch limited to its own orders
+- `GET /api/users`, `POST /api/users`, `PUT /api/users/:id`, `PATCH
+  /api/users/:id/password`, `PATCH /api/users/:id/active` — admin only; see
+  "Users management" above
 
 ## Live updates
 
@@ -184,4 +244,9 @@ while the Orders tab is open.
   branch session gets 403 on another branch's orders and on admin-only
   routes; a full agent→order→branch-accept→admin-view flow round-trips
   correctly.
+- `curl` also confirms the Users flow end to end: admin creates an agent,
+  the agent logs in and can use its session, the admin deactivates that
+  agent, the agent's already-open session is rejected on its next request
+  (401), and a fresh login attempt with the same credentials also fails
+  (403) — then reactivating restores login.
 - `git log` shows the commit history; `git status` is clean.

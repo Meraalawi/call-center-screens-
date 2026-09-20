@@ -1,6 +1,9 @@
 // Dashboard: admin login, branch management (add/edit/deactivate/delete
 // with an active-order guard), per-branch menu management (add/edit/remove,
-// availability toggle), and a live cross-branch order table with filters.
+// availability toggle), a live cross-branch order table with filters, and a
+// Users section (add/edit/reset-password/deactivate agent accounts; branch
+// credentials are listed read-only there since they already live in this
+// same table — see src/routes/users.js for why).
 // Polls orders every few seconds while the Orders tab is open.
 (function () {
   'use strict';
@@ -15,7 +18,7 @@
     user: null,
     loginError: '',
     loginBusy: false,
-    section: 'branches', // 'branches' | 'menu' | 'orders'
+    section: 'branches', // 'branches' | 'menu' | 'orders' | 'users'
     branches: [],
     orders: [],
     // branches tab
@@ -30,6 +33,11 @@
     // orders tab
     orderBranchFilter: 'all',
     orderStatusFilter: 'all',
+    // users tab
+    users: [],
+    addingUser: false,
+    editUserId: null,
+    resetPasswordUserId: null,
   };
 
   function toast(msg) {
@@ -127,6 +135,10 @@
     const res = await API.get(`/api/orders?${qs.toString()}`);
     state.orders = res.orders;
   }
+  async function loadUsers() {
+    const res = await API.get('/api/users');
+    state.users = res.users;
+  }
 
   function startPolling() {
     stopPolling();
@@ -151,6 +163,7 @@
           <button data-dashsec="branches" aria-pressed="${state.section === 'branches'}">${t('dashBranches')}</button>
           <button data-dashsec="menu" aria-pressed="${state.section === 'menu'}">${t('dashMenu')}</button>
           <button data-dashsec="orders" aria-pressed="${state.section === 'orders'}">${t('dashOrders')}</button>
+          <button data-dashsec="users" aria-pressed="${state.section === 'users'}">${t('dashUsers')}</button>
         </div>
       </div>
       <div id="dashBody"></div>`;
@@ -158,11 +171,13 @@
       state.section = el.dataset.dashsec;
       if (state.section === 'menu') { await loadMenuItems().catch(() => {}); }
       if (state.section === 'orders') { await loadOrders().catch(() => {}); }
+      if (state.section === 'users') { await loadUsers().catch(() => {}); }
       renderDashboard();
     }));
     if (state.section === 'branches') renderBranchesTab();
     else if (state.section === 'menu') renderMenuTab();
-    else renderOrdersTab();
+    else if (state.section === 'orders') renderOrdersTab();
+    else renderUsersTab();
   }
 
   // ---------------- branches tab ----------------
@@ -393,6 +408,139 @@
         toast(t('toastItemRemoved', iName(removed)));
         await loadMenuItems();
         renderMenuTab();
+      } catch (err) { toast(err.message || t('networkError')); }
+    }));
+  }
+
+  // ---------------- users tab ----------------
+  function renderUsersTab() {
+    const body = document.getElementById('dashBody');
+    const roleLabel = { agent: t('roleAgent'), admin: t('roleAdmin'), branch: t('roleBranch') };
+
+    const addFormHtml = state.addingUser ? `
+      <div class="add-form">
+        <div class="field"><label>${t('usernameLbl')}</label><input id="newUserUsername" type="text" placeholder="${t('usernamePh')}"></div>
+        <div class="field"><label>${t('displayNameLbl')}</label><input id="newUserDisplayName" type="text" placeholder="${t('displayNamePh')}"></div>
+        <div class="field"><label>${t('passwordLbl')}</label><input id="newUserPassword" type="password" placeholder="${t('passwordPh')}" autocomplete="new-password"></div>
+        <button class="btn" id="saveUserBtn">${t('addUserSave')}</button>
+        <button class="btn-ghost" id="cancelUserBtn">${t('cancel')}</button>
+      </div>` : `<button class="btn-ghost" id="addUserBtn" style="margin-bottom:14px;">${t('addUser')}</button>`;
+
+    const rows = state.users.map((u) => {
+      if (state.editUserId === u.id) {
+        return `<tr>
+          <td>${escapeHtml(u.username)}</td>
+          <td><input value="${escapeHtml(u.displayName)}" id="editUserName_${u.id}"></td>
+          <td>${roleLabel[u.role] || u.role}</td>
+          <td class="num">${escapeHtml((u.createdAt || '').slice(0, 10))}</td>
+          <td><span class="status-pill ${u.active ? '' : 'off'}">${u.active ? t('active') : t('inactive')}</span></td>
+          <td>
+            <div class="row-actions">
+              <button class="btn-text" data-save-user="${u.id}">${LANG === 'ar' ? 'حفظ' : 'Save'}</button>
+              <button class="btn-text" data-cancel-edit-user="${u.id}">${t('cancel')}</button>
+            </div>
+          </td>
+        </tr>`;
+      }
+      if (state.resetPasswordUserId === u.id) {
+        return `<tr>
+          <td>${escapeHtml(u.username)}</td>
+          <td>${escapeHtml(u.displayName)}</td>
+          <td>${roleLabel[u.role] || u.role}</td>
+          <td class="num">${escapeHtml((u.createdAt || '').slice(0, 10))}</td>
+          <td><span class="status-pill ${u.active ? '' : 'off'}">${u.active ? t('active') : t('inactive')}</span></td>
+          <td>
+            <div class="row-actions">
+              <input type="password" id="resetPass_${u.id}" placeholder="${t('newPasswordPh')}" autocomplete="new-password" style="max-width:180px;">
+              <button class="btn-text" data-save-reset="${u.id}">${t('savePassword')}</button>
+              <button class="btn-text" data-cancel-reset="${u.id}">${t('cancel')}</button>
+            </div>
+          </td>
+        </tr>`;
+      }
+      const actions = u.role === 'agent'
+        ? `<div class="row-actions">
+             <button class="btn-text" data-toggle-user-active="${u.id}" data-active="${u.active}">${u.active ? t('deactivate') : t('activate')}</button>
+             <button class="btn-text" data-edit-user="${u.id}">${t('edit')}</button>
+             <button class="btn-text" data-reset-user="${u.id}">${t('resetPassword')}</button>
+           </div>`
+        : u.role === 'branch'
+          ? `<span class="eyebrow">${t('branchRowNote')}</span>`
+          : '';
+      return `<tr>
+        <td>${escapeHtml(u.username)}</td>
+        <td>${escapeHtml(u.displayName)}</td>
+        <td>${roleLabel[u.role] || u.role}</td>
+        <td class="num">${escapeHtml((u.createdAt || '').slice(0, 10))}</td>
+        <td><span class="status-pill ${u.active ? '' : 'off'}">${u.active ? t('active') : t('inactive')}</span></td>
+        <td>${actions}</td>
+      </tr>`;
+    }).join('');
+
+    body.innerHTML = `
+      ${addFormHtml}
+      <div class="table-wrap"><table class="data">
+        <thead><tr><th>${t('thUsername')}</th><th>${t('thDisplayName')}</th><th>${t('thRole')}</th><th>${t('thCreated')}</th><th>${t('thActive')}</th><th></th></tr></thead>
+        <tbody>${rows || `<tr><td colspan="6"><div class="empty-state">${t('noUsersYet')}</div></td></tr>`}</tbody>
+      </table></div>`;
+
+    const addBtn = document.getElementById('addUserBtn');
+    if (addBtn) addBtn.addEventListener('click', () => { state.addingUser = true; renderUsersTab(); });
+    const cancelBtn = document.getElementById('cancelUserBtn');
+    if (cancelBtn) cancelBtn.addEventListener('click', () => { state.addingUser = false; renderUsersTab(); });
+    const saveBtn = document.getElementById('saveUserBtn');
+    if (saveBtn) saveBtn.addEventListener('click', async () => {
+      const username = document.getElementById('newUserUsername').value.trim();
+      const displayName = document.getElementById('newUserDisplayName').value.trim();
+      const password = document.getElementById('newUserPassword').value;
+      if (!username || !displayName) { toast(t('toastItemNeedsName')); return; }
+      try {
+        await API.post('/api/users', { username, displayName, password });
+        state.addingUser = false;
+        toast(t('toastUserAdded', displayName));
+        await loadUsers();
+        renderUsersTab();
+      } catch (err) {
+        if (err.status === 409) toast(t('toastUsernameTaken'));
+        else toast(err.message || t('networkError'));
+      }
+    });
+
+    body.querySelectorAll('[data-toggle-user-active]').forEach((el) => el.addEventListener('click', async () => {
+      const id = Number(el.dataset.toggleUserActive);
+      const active = el.dataset.active === 'true';
+      const u = state.users.find((x) => x.id === id);
+      try {
+        await API.patch(`/api/users/${id}/active`, { active: !active });
+        toast(active ? t('toastUserDeactivated', u.displayName) : t('toastUserActivated', u.displayName));
+        await loadUsers();
+        renderUsersTab();
+      } catch (err) { toast(err.message || t('networkError')); }
+    }));
+    body.querySelectorAll('[data-edit-user]').forEach((el) => el.addEventListener('click', () => { state.editUserId = Number(el.dataset.editUser); state.resetPasswordUserId = null; renderUsersTab(); }));
+    body.querySelectorAll('[data-cancel-edit-user]').forEach((el) => el.addEventListener('click', () => { state.editUserId = null; renderUsersTab(); }));
+    body.querySelectorAll('[data-save-user]').forEach((el) => el.addEventListener('click', async () => {
+      const id = Number(el.dataset.saveUser);
+      const displayName = document.getElementById('editUserName_' + id).value.trim();
+      try {
+        await API.put(`/api/users/${id}`, { displayName });
+        state.editUserId = null;
+        toast(t('toastUserUpdated'));
+        await loadUsers();
+        renderUsersTab();
+      } catch (err) { toast(err.message || t('networkError')); }
+    }));
+    body.querySelectorAll('[data-reset-user]').forEach((el) => el.addEventListener('click', () => { state.resetPasswordUserId = Number(el.dataset.resetUser); state.editUserId = null; renderUsersTab(); }));
+    body.querySelectorAll('[data-cancel-reset]').forEach((el) => el.addEventListener('click', () => { state.resetPasswordUserId = null; renderUsersTab(); }));
+    body.querySelectorAll('[data-save-reset]').forEach((el) => el.addEventListener('click', async () => {
+      const id = Number(el.dataset.saveReset);
+      const password = document.getElementById('resetPass_' + id).value;
+      const u = state.users.find((x) => x.id === id);
+      try {
+        await API.patch(`/api/users/${id}/password`, { password });
+        state.resetPasswordUserId = null;
+        toast(t('toastPasswordReset', u.displayName));
+        renderUsersTab();
       } catch (err) { toast(err.message || t('networkError')); }
     }));
   }
