@@ -1,0 +1,165 @@
+// Shared EN/AR string table + t() helper, ported from the original prototype
+// so it isn't duplicated across the three pages.
+(function (global) {
+  const STR = {
+    en: {
+      brandTag: 'Cake & Coffee · Call center console',
+      tabDesk: 'Call Center Desk', tabBranch: 'Branch Screen', tabDashboard: 'Dashboard',
+      bsTitle: 'Which branch is this order for?', bsSub: "Pick a branch to open its menu and prices.",
+      bsCurrent: 'Current order', bsBranchTag: 'Branch', bsItems: (n) => `${n} items on menu`,
+      bsCta: 'Browse menu →', noActiveBranches: 'No active branches — add one in the Dashboard.',
+      changeBranch: '← Change branch', pricesNote: "Prices shown are this branch's", allCat: 'All',
+      noItemsInCat: 'No items in this category yet.',
+      ticketCount: (n) => `Order ticket · ${n} item${n === 1 ? '' : 's'}`,
+      sendingTo: (name, city) => `Sending to <b>${name}</b> · ${city}`,
+      custName: 'Customer name', custNamePh: 'e.g. R. Haddad',
+      custPhone: 'Phone number', custPhonePh: 'e.g. 059 000 0000',
+      fulfillment: 'Fulfillment', pickup: 'Pickup', delivery: 'Delivery',
+      addressLbl: 'Delivery address', addressPh: 'e.g. Al-Tireh, Bldg 12, near the pharmacy',
+      orderNoteLbl: 'Note for the branch', orderNotePh: 'e.g. no onions, ring the bell twice, extra napkins',
+      noteLbl: 'Note',
+      noItemsYet: 'No items yet — add from the menu.', total: 'Total',
+      reviewBtn: 'Review & confirm', sendHint: "Read the order back to the customer before it's sent",
+      reviewTitle: 'Read this back to the customer', reviewSub: (name) => `Confirm items and total before sending to ${name}.`,
+      customerLbl: 'Customer', notEntered: 'Not entered', phoneLbl: 'Phone', branchLbl: 'Branch',
+      addressWarn: 'Enter a delivery address before sending this order.',
+      confirmSend: (name) => `Confirm & send to ${name}`, backToEdit: 'Back to edit',
+      toastSent: (id, name) => `Order ${id} sent to ${name} — awaiting branch confirmation`,
+      colNew: 'New', colPrep: 'Preparing', colReady: 'Ready',
+      emptyNew: 'No new orders', emptyPrep: 'Nothing in progress', emptyReady: 'Nothing waiting for pickup',
+      actAccept: 'Accept order', actReady: 'Mark ready', actComplete: 'Complete order', actCancel: 'Cancel',
+      statusNew: 'Awaiting confirmation', statusPrep: 'Preparing', statusReady: 'Ready',
+      rungInToggle: 'Rung in register', rungInYes: 'Rung in register ✓',
+      activeCount: (n) => `${n} active`, completedTodayN: (n) => `${n} completed today`,
+      viewingBranch: (name, city) => `Viewing <b>${name}</b> · ${city}`,
+      toastCompleted: (id) => `Order ${id} completed`, toastCancelled: (id) => `Order ${id} cancelled`,
+      dashBranches: 'Branches', dashMenu: 'Menu', dashOrders: 'Orders',
+      addBranch: '+ Add branch', nameLbl: 'Name', addressAreaLbl: 'Address / area', addBranchSave: 'Add branch',
+      cancel: 'Cancel', thName: 'Name', thAddress: 'Address', thCode: 'Code', thItems: 'Items', thStatus: 'Status',
+      active: 'Active', inactive: 'Inactive', deactivate: 'Deactivate', activate: 'Activate',
+      edit: 'Edit', del: 'Delete', confirmDelete: 'Confirm delete',
+      cantDelete: (n) => `${n} active order${n === 1 ? '' : 's'} — can't delete`, noBranchesYet: 'No branches yet.',
+      branchNamePh: 'e.g. Bethlehem', branchAreaPh: 'e.g. Manger St',
+      toastBranchAdded: (n) => `${n} added`, toastBranchRemoved: (n) => `${n} removed`,
+      editingMenuFor: 'Editing menu for', itemsCountLbl: (n) => `${n} items`,
+      addItem: '+ Add item', itemNameLbl: 'Item name', categoryLbl: 'Category', priceLbl: 'Price (₪)',
+      addItemSave: 'Add item', itemNamePh: 'e.g. Iced Latte', categoryPh: 'e.g. Drinks',
+      thItem: 'Item', thCategory: 'Category', thPrice: 'Price',
+      markUnavail: 'Mark unavailable', markAvail: 'Mark available', remove: 'Remove',
+      noItemsMenu: "No items yet — add this branch's menu below.",
+      toastItemNeedsName: 'Item needs a name', toastItemAdded: (item, branch) => `${item} added to ${branch}`,
+      toastItemRemoved: (n) => `Removed ${n}`, undo: 'Undo',
+      allBranchesOpt: 'All branches', allStatusesOpt: 'All statuses',
+      activeOrdersAcross: (n, b) => `${n} active order${n === 1 ? '' : 's'} across ${b} branch${b === 1 ? '' : 'es'}`,
+      thOrder: 'Order', thBranch: 'Branch', thCustomer: 'Customer', thFulfillment: 'Fulfillment',
+      thItemsCol: 'Items', thTotal: 'Total', thStatusCol: 'Status', thAge: 'Age', thRegister: 'Register', thNote: 'Note',
+      noOrdersMatch: 'No orders match this filter right now.', phoneOrder: 'Phone order',
+      regYes: 'Rung ✓', regNo: 'Not yet', noNote: '—',
+      loginTitle: 'Sign in', loginUsername: 'Username', loginPassword: 'Password', loginBtn: 'Sign in',
+      loginError: 'Incorrect username or password.', loginErrorBranch: 'Incorrect branch password.',
+      logout: 'Log out', switchBranch: 'Switch branch', pickYourBranch: 'Which branch is this?',
+      pickYourBranchSub: 'Pick your branch, then enter its shared password.',
+      agentLoginSub: 'Call Center Desk — sign in with your individual account.',
+      adminLoginSub: 'Dashboard — admin sign in.',
+      branchLoginSub: (name) => `Enter the shared password for ${name}.`,
+      signedInAs: 'Signed in as', loadingText: 'Loading…',
+      networkError: 'Could not reach the server. Please try again.',
+    },
+    ar: {
+      brandTag: 'كيك وقهوة · لوحة مركز الاتصال',
+      tabDesk: 'مكتب مركز الاتصال', tabBranch: 'شاشة الفرع', tabDashboard: 'لوحة التحكم',
+      bsTitle: 'لأي فرع هذا الطلب؟', bsSub: 'اختر فرعاً لفتح قائمته وأسعاره.',
+      bsCurrent: 'الطلب الحالي', bsBranchTag: 'فرع', bsItems: (n) => `${n} صنف على القائمة`,
+      bsCta: 'تصفح القائمة ←', noActiveBranches: 'لا توجد فروع نشطة — أضف فرعاً من لوحة التحكم.',
+      changeBranch: 'تغيير الفرع →', pricesNote: 'الأسعار المعروضة خاصة بهذا الفرع', allCat: 'الكل',
+      noItemsInCat: 'لا توجد أصناف في هذا القسم بعد.',
+      ticketCount: (n) => `فاتورة الطلب · ${n} صنف`,
+      sendingTo: (name, city) => `يُرسل إلى <b>${name}</b> · ${city}`,
+      custName: 'اسم الزبون', custNamePh: 'مثال: ر. حداد',
+      custPhone: 'رقم الهاتف', custPhonePh: 'مثال: 059 000 0000',
+      fulfillment: 'طريقة الاستلام', pickup: 'استلام من الفرع', delivery: 'توصيل',
+      addressLbl: 'عنوان التوصيل', addressPh: 'مثال: الطيرة، عمارة 12، قرب الصيدلية',
+      orderNoteLbl: 'ملاحظة للفرع', orderNotePh: 'مثال: بدون بصل، اطرق الجرس مرتين، مناديل إضافية',
+      noteLbl: 'ملاحظة',
+      noItemsYet: 'لا توجد أصناف بعد — أضف من القائمة.', total: 'المجموع',
+      reviewBtn: 'مراجعة وتأكيد', sendHint: 'اقرأ الطلب على الزبون قبل إرساله',
+      reviewTitle: 'اقرأ هذا على الزبون', reviewSub: (name) => `تأكد من الأصناف والمجموع قبل الإرسال إلى ${name}.`,
+      customerLbl: 'الزبون', notEntered: 'لم يُدخل', phoneLbl: 'الهاتف', branchLbl: 'الفرع',
+      addressWarn: 'أدخل عنوان التوصيل قبل إرسال هذا الطلب.',
+      confirmSend: (name) => `تأكيد الإرسال إلى ${name}`, backToEdit: 'العودة للتعديل',
+      toastSent: (id, name) => `تم إرسال الطلب ${id} إلى ${name} — بانتظار تأكيد الفرع`,
+      colNew: 'جديد', colPrep: 'قيد التحضير', colReady: 'جاهز',
+      emptyNew: 'لا توجد طلبات جديدة', emptyPrep: 'لا شيء قيد التحضير', emptyReady: 'لا شيء بانتظار الاستلام',
+      actAccept: 'قبول الطلب', actReady: 'تحديد كجاهز', actComplete: 'إنهاء الطلب', actCancel: 'إلغاء',
+      statusNew: 'بانتظار التأكيد', statusPrep: 'قيد التحضير', statusReady: 'جاهز',
+      rungInToggle: 'تسجيل بالكاشير', rungInYes: '✓ مسجّل بالكاشير',
+      activeCount: (n) => `${n} نشط`, completedTodayN: (n) => `${n} منجز اليوم`,
+      viewingBranch: (name, city) => `تعرض <b>${name}</b> · ${city}`,
+      toastCompleted: (id) => `تم إنهاء الطلب ${id}`, toastCancelled: (id) => `تم إلغاء الطلب ${id}`,
+      dashBranches: 'الفروع', dashMenu: 'القائمة', dashOrders: 'الطلبات',
+      addBranch: '+ إضافة فرع', nameLbl: 'الاسم', addressAreaLbl: 'العنوان / المنطقة', addBranchSave: 'إضافة الفرع',
+      cancel: 'إلغاء', thName: 'الاسم', thAddress: 'العنوان', thCode: 'الرمز', thItems: 'الأصناف', thStatus: 'الحالة',
+      active: 'نشط', inactive: 'غير نشط', deactivate: 'إيقاف', activate: 'تفعيل',
+      edit: 'تعديل', del: 'حذف', confirmDelete: 'تأكيد الحذف',
+      cantDelete: (n) => `${n} طلب نشط — لا يمكن الحذف`, noBranchesYet: 'لا توجد فروع بعد.',
+      branchNamePh: 'مثال: بيت لحم', branchAreaPh: 'مثال: شارع المهد',
+      toastBranchAdded: (n) => `تمت إضافة ${n}`, toastBranchRemoved: (n) => `تمت إزالة ${n}`,
+      editingMenuFor: 'تعديل قائمة', itemsCountLbl: (n) => `${n} صنف`,
+      addItem: '+ إضافة صنف', itemNameLbl: 'اسم الصنف', categoryLbl: 'القسم', priceLbl: 'السعر (₪)',
+      addItemSave: 'إضافة الصنف', itemNamePh: 'مثال: آيس لاتيه', categoryPh: 'مثال: مشروبات',
+      thItem: 'الصنف', thCategory: 'القسم', thPrice: 'السعر',
+      markUnavail: 'تحديد كغير متوفر', markAvail: 'تحديد كمتوفر', remove: 'حذف',
+      noItemsMenu: 'لا توجد أصناف بعد — أضف قائمة هذا الفرع أدناه.',
+      toastItemNeedsName: 'الصنف يحتاج اسماً', toastItemAdded: (item, branch) => `تمت إضافة ${item} إلى ${branch}`,
+      toastItemRemoved: (n) => `تم حذف ${n}`, undo: 'تراجع',
+      allBranchesOpt: 'كل الفروع', allStatusesOpt: 'كل الحالات',
+      activeOrdersAcross: (n, b) => `${n} طلب نشط عبر ${b} فرع`,
+      thOrder: 'الطلب', thBranch: 'الفرع', thCustomer: 'الزبون', thFulfillment: 'طريقة الاستلام',
+      thItemsCol: 'الأصناف', thTotal: 'المجموع', thStatusCol: 'الحالة', thAge: 'الوقت', thRegister: 'الكاشير', thNote: 'ملاحظة',
+      noOrdersMatch: 'لا توجد طلبات مطابقة لهذا الفلتر حالياً.', phoneOrder: 'طلب هاتفي',
+      regYes: '✓ مسجّل', regNo: 'لم يُسجَّل', noNote: '—',
+      loginTitle: 'تسجيل الدخول', loginUsername: 'اسم المستخدم', loginPassword: 'كلمة المرور', loginBtn: 'دخول',
+      loginError: 'اسم المستخدم أو كلمة المرور غير صحيحة.', loginErrorBranch: 'كلمة مرور الفرع غير صحيحة.',
+      logout: 'تسجيل الخروج', switchBranch: 'تغيير الفرع', pickYourBranch: 'ما هو فرعك؟',
+      pickYourBranchSub: 'اختر فرعك، ثم أدخل كلمة المرور المشتركة له.',
+      agentLoginSub: 'مكتب مركز الاتصال — سجّل الدخول بحسابك الفردي.',
+      adminLoginSub: 'لوحة التحكم — دخول المسؤول.',
+      branchLoginSub: (name) => `أدخل كلمة المرور المشتركة لـ ${name}.`,
+      signedInAs: 'تم الدخول باسم', loadingText: 'جارٍ التحميل…',
+      networkError: 'تعذّر الوصول إلى الخادم. حاول مرة أخرى.',
+    },
+  };
+
+  function getLang() {
+    try { return localStorage.getItem('vc.lang') || 'en'; } catch (_) { return 'en'; }
+  }
+  function setLang(lang) {
+    try { localStorage.setItem('vc.lang', lang); } catch (_) { /* ignore */ }
+  }
+
+  let LANG = getLang();
+
+  function t(key, ...args) {
+    const v = STR[LANG][key];
+    return typeof v === 'function' ? v(...args) : v;
+  }
+
+  function applyDocumentDir() {
+    document.body.classList.toggle('rtl', LANG === 'ar');
+    document.documentElement.setAttribute('lang', LANG);
+    document.documentElement.setAttribute('dir', LANG === 'ar' ? 'rtl' : 'ltr');
+  }
+
+  function setLanguage(lang) {
+    LANG = lang === 'ar' ? 'ar' : 'en';
+    setLang(LANG);
+    applyDocumentDir();
+  }
+
+  global.I18N = {
+    get LANG() { return LANG; },
+    t,
+    setLanguage,
+    applyDocumentDir,
+  };
+})(window);
