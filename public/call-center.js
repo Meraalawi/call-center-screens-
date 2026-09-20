@@ -302,6 +302,7 @@
             <h2>${t('reviewTitle')}</h2>
             <div class="review-sub">${t('reviewSub', window.FMT.escapeHtml(bName(branch)))}</div>
           </div>
+          <div class="review-note">${t('reviewCrowdCheck')}</div>
           <div class="review-block">
             ${state.cart.map((l) => `<div class="review-row"><span>${l.qty} × ${window.FMT.escapeHtml(LANG === 'ar' ? (l.nameAr || l.name) : l.name)}</span><span class="mono">${fmt(l.priceCents * l.qty)}</span></div>`).join('')}
             <div class="review-row" style="border-top:1px solid var(--border);padding-top:8px;font-weight:700;"><span>${t('total')}</span><span class="mono">${fmt(total)}</span></div>

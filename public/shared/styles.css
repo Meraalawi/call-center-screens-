@@ -175,6 +175,7 @@
   .review-row{display:flex;justify-content:space-between;font-size:13px;gap:10px;}
   .review-row .rl{color:var(--ink-2);}
   .review-warn{font-size:12px;color:var(--ink);background:var(--surface-2);border:1px dashed var(--border-strong);border-radius:var(--radius-s);padding:8px 10px;}
+  .review-note{font-size:12px;color:var(--ink);background:#fdf3d8;border:1px solid var(--border-strong);border-radius:var(--radius-s);padding:8px 10px;}
   .review-actions{display:flex;flex-direction:column;gap:8px;margin-top:4px;}
 
   /* ---------- cash screen ---------- */
