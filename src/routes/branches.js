@@ -6,13 +6,10 @@ function branchRow(id) {
   return db.prepare('SELECT * FROM branches WHERE id = ?').get(id);
 }
 
-const BRANCH_STATUSES = ['normal', 'busy', 'very_busy'];
-
 function publicBranch(b) {
   return {
     id: b.id, code: b.code, name: b.name, nameAr: b.name_ar,
     city: b.city, cityAr: b.city_ar, active: !!b.active,
-    status: b.status || 'normal', statusNote: b.status_note || '',
   };
 }
 
@@ -91,31 +88,6 @@ function register(app) {
     if (password) {
       db.prepare(`UPDATE users SET password_hash = ? WHERE role = 'branch' AND branch_id = ?`).run(hashPassword(password), id);
     }
-    res.json({ branch: publicBranch(branchRow(id)) });
-  });
-
-  // Branch load status ("crowded / running late" note) — set by the branch
-  // itself so the Call Center Desk can warn the customer before sending an
-  // order there. A branch session may only ever touch its own row; admin can
-  // override any branch from the Dashboard the same way it manages
-  // everything else about branches.
-  app.patch('/api/branches/:id/status', requireRole('admin', 'branch'), (req, res) => {
-    const id = Number(req.params.id);
-    const existing = branchRow(id);
-    if (!existing) return res.status(404).json({ error: 'Branch not found' });
-    const user = req.session.user;
-    if (user.role === 'branch' && user.branchId !== id) {
-      return res.status(403).json({ error: 'Not allowed for this role' });
-    }
-    const { status, statusNote } = req.body || {};
-    if (status !== undefined && !BRANCH_STATUSES.includes(status)) {
-      return res.status(400).json({ error: `status must be one of ${BRANCH_STATUSES.join(', ')}` });
-    }
-    db.prepare('UPDATE branches SET status = ?, status_note = ? WHERE id = ?').run(
-      status !== undefined ? status : existing.status,
-      statusNote !== undefined ? String(statusNote).slice(0, 200) : existing.status_note,
-      id
-    );
     res.json({ branch: publicBranch(branchRow(id)) });
   });
 

@@ -7,13 +7,6 @@
 const db = require('../db');
 const { verifyPassword } = require('../lib/password');
 
-// Branch rows are otherwise returned close to their raw shape here (see
-// history), but status/status_note are added camelCase so the Branch Screen
-// frontend can read them the same way it reads everything else from the API.
-function withStatusCamel(branch) {
-  return { ...branch, status: branch.status || 'normal', statusNote: branch.status_note || '' };
-}
-
 function publicUser(user) {
   return {
     id: user.id,
@@ -57,10 +50,10 @@ function register(app) {
     if (!user || !verifyPassword(password || '', user.password_hash)) {
       return res.status(401).json({ error: 'Invalid branch password' });
     }
-    const branch = db.prepare(`SELECT id, code, name, name_ar, city, city_ar, active, status, status_note FROM branches WHERE id = ?`).get(id);
+    const branch = db.prepare(`SELECT id, code, name, name_ar, city, city_ar, active FROM branches WHERE id = ?`).get(id);
     if (!branch || !branch.active) return res.status(403).json({ error: 'This branch is not active' });
     req.session.user = publicUser(user);
-    res.json({ user: req.session.user, branch: withStatusCamel(branch) });
+    res.json({ user: req.session.user, branch });
   });
 
   app.post('/api/auth/logout', (req, res) => {
@@ -81,8 +74,7 @@ function register(app) {
     }
     let branch = null;
     if (user.role === 'branch' && user.branchId) {
-      const row = db.prepare(`SELECT id, code, name, name_ar, city, city_ar, active, status, status_note FROM branches WHERE id = ?`).get(user.branchId);
-      branch = row ? withStatusCamel(row) : null;
+      branch = db.prepare(`SELECT id, code, name, name_ar, city, city_ar, active FROM branches WHERE id = ?`).get(user.branchId);
     }
     res.json({ user, branch });
   });
