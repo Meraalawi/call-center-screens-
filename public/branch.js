@@ -162,6 +162,18 @@
       ready: { label: t('statusReady'), icon: '✓' },
     };
 
+    const ETA_OPTIONS = [5, 10, 15, 20, 30, 45, 60];
+    function etaControl(o) {
+      if (o.status !== 'new' && o.status !== 'preparing') return '';
+      const opts = [`<option value=""${o.etaMinutes ? '' : ' selected'}>${t('etaNone')}</option>`]
+        .concat(ETA_OPTIONS.map((n) => `<option value="${n}"${o.etaMinutes === n ? ' selected' : ''}>${t('etaMinutesFmt', n)}</option>`))
+        .join('');
+      return `<div class="oc-eta">
+        <label>${t('etaLbl')}</label>
+        <select data-eta="${o.id}">${opts}</select>
+      </div>`;
+    }
+
     function card(o, nextLabel, nextStatus, cancelable) {
       const itemsHtml = o.items.map((it) => `<div class="oc-item"><span>${it.qty} × ${window.FMT.escapeHtml(LANG === 'ar' ? (it.nameAr || it.name) : it.name)}</span></div>`).join('');
       const sm = statusMeta[o.status];
@@ -174,6 +186,7 @@
         ${o.notes ? `<div class="oc-note"><span class="oc-note-tag">${t('noteLbl')}:</span><span>${window.FMT.escapeHtml(o.notes)}</span></div>` : ''}
         <div class="oc-items">${itemsHtml}</div>
         <div class="oc-total"><span>${t('total')}</span><span class="mono">${fmt(o.totalCents)}</span></div>
+        ${etaControl(o)}
         <button type="button" class="oc-register ${o.rungIn ? 'checked' : ''}" data-toggle-register="${o.id}" aria-pressed="${!!o.rungIn}">
           <span class="box">${o.rungIn ? '✓' : ''}</span><span>${o.rungIn ? t('rungInYes') : t('rungInToggle')}</span>
         </button>
@@ -229,6 +242,15 @@
       const o = state.orders.find((oo) => oo.id === id);
       try {
         await API.patch(`/api/orders/${id}/rung-in`, { rungIn: !o.rungIn });
+        await loadOrders();
+        renderCashView();
+      } catch (err) { toast(err.message || t('networkError')); }
+    }));
+    root.querySelectorAll('[data-eta]').forEach((el) => el.addEventListener('change', async () => {
+      const id = Number(el.dataset.eta);
+      const val = el.value ? Number(el.value) : null;
+      try {
+        await API.patch(`/api/orders/${id}/eta`, { etaMinutes: val });
         await loadOrders();
         renderCashView();
       } catch (err) { toast(err.message || t('networkError')); }

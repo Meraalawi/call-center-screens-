@@ -17,6 +17,7 @@ function orderWithItems(orderRow) {
     notes: orderRow.notes,
     status: orderRow.status,
     rungIn: !!orderRow.rung_in,
+    etaMinutes: orderRow.eta_minutes,
     totalCents: orderRow.total_cents,
     createdAt: orderRow.created_at,
     items: items.map((it) => ({ name: it.name, nameAr: it.name_ar, qty: it.qty, priceCents: it.price_cents })),
@@ -148,6 +149,28 @@ function register(app) {
       }
       db.prepare('UPDATE orders SET status = ? WHERE id = ?').run(status, id);
     }
+    res.json({ order: orderWithItems(db.prepare('SELECT * FROM orders WHERE id = ?').get(id)) });
+  });
+
+  // Only the owning branch (or admin) sets/clears an order's estimated
+  // ready time — the same scoping as status/rung-in changes.
+  app.patch('/api/orders/:id/eta', requireRole('admin', 'branch'), (req, res) => {
+    const id = Number(req.params.id);
+    const row = db.prepare('SELECT * FROM orders WHERE id = ?').get(id);
+    if (!row) return res.status(404).json({ error: 'Order not found' });
+    const user = req.session.user;
+    if (user.role === 'branch' && row.branch_id !== user.branchId) return res.status(403).json({ error: 'Not allowed for this branch' });
+
+    let { etaMinutes } = req.body || {};
+    if (etaMinutes === null || etaMinutes === '' || etaMinutes === undefined) {
+      etaMinutes = null;
+    } else {
+      etaMinutes = Number(etaMinutes);
+      if (!Number.isFinite(etaMinutes) || etaMinutes < 1 || etaMinutes > 180 || !Number.isInteger(etaMinutes)) {
+        return res.status(400).json({ error: 'etaMinutes must be a whole number between 1 and 180, or null to clear' });
+      }
+    }
+    db.prepare('UPDATE orders SET eta_minutes = ? WHERE id = ?').run(etaMinutes, id);
     res.json({ order: orderWithItems(db.prepare('SELECT * FROM orders WHERE id = ?').get(id)) });
   });
 

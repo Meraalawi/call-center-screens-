@@ -82,6 +82,8 @@
       myOrdersTitle: 'Your orders', myOrdersSub: 'Orders you’ve sent, with live status from the branch.',
       myOrdersEmpty: 'You haven’t sent any orders yet.',
       statusCompleted: 'Completed', statusCancelled: 'Cancelled',
+      etaLbl: 'Ready in', etaNone: 'No estimate', etaMinutesFmt: (n) => `~${n} min`,
+      etaBadge: (n) => `~${n} min`, etaUnset: 'No estimate yet',
     },
     ar: {
       brandTag: 'كيك وقهوة · لوحة مركز الاتصال',
@@ -163,6 +165,8 @@
       myOrdersTitle: 'طلباتك', myOrdersSub: 'الطلبات التي أرسلتها، مع حالتها الحية من الفرع.',
       myOrdersEmpty: 'لم ترسل أي طلبات بعد.',
       statusCompleted: 'مكتمل', statusCancelled: 'ملغى',
+      etaLbl: 'جاهز خلال', etaNone: 'لا يوجد تقدير', etaMinutesFmt: (n) => `~${n} د`,
+      etaBadge: (n) => `~${n} د`, etaUnset: 'لا يوجد تقدير بعد',
     },
   };
 

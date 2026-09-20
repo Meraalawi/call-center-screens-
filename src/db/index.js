@@ -112,6 +112,16 @@ if (!userColumns.includes('active')) {
   db.exec('ALTER TABLE users ADD COLUMN active INTEGER NOT NULL DEFAULT 1');
 }
 
+// Migration: `eta_minutes` — the branch's own estimate of how many more
+// minutes an order needs, shown to the call center so an agent can answer
+// "is my order ready yet?" calls without guessing. NULL means no estimate
+// has been set. Plain informational number (not a countdown/timestamp) —
+// the branch re-sets it as things change, kept simple on purpose.
+const orderColumns = db.prepare("PRAGMA table_info(orders)").all().map((c) => c.name);
+if (!orderColumns.includes('eta_minutes')) {
+  db.exec('ALTER TABLE orders ADD COLUMN eta_minutes INTEGER');
+}
+
 // node:sqlite's DatabaseSync has no built-in .transaction() helper (unlike
 // better-sqlite3), so provide the same "run this function atomically" shape
 // used throughout the routes/seed code.

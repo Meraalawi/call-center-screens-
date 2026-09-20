@@ -178,36 +178,56 @@
 
   function renderOrderStatus(root) {
     const statusMeta = {
-      new: { label: t('statusNew'), cls: 'status-new' },
-      preparing: { label: t('statusPrep'), cls: 'status-preparing' },
-      ready: { label: t('statusReady'), cls: 'status-ready' },
-      completed: { label: t('statusCompleted'), cls: 'status-completed' },
-      cancelled: { label: t('statusCancelled'), cls: 'status-cancelled' },
+      new: { label: t('statusNew') },
+      preparing: { label: t('statusPrep') },
+      ready: { label: t('statusReady') },
     };
-    const cards = state.orders.map((o) => {
+
+    function card(o) {
       const branch = state.branches.find((b) => b.id === o.branchId);
-      const sm = statusMeta[o.status] || { label: o.status, cls: '' };
+      const sm = statusMeta[o.status];
       const itemsLine = o.items.map((it) => `${it.qty} × ${window.FMT.escapeHtml(LANG === 'ar' ? (it.nameAr || it.name) : it.name)}`).join(', ');
-      return `<div class="order-card ${sm.cls}">
+      return `<div class="order-card status-${o.status}">
         <div class="oc-head"><span class="oc-id mono">${window.FMT.escapeHtml(o.code)}</span><span class="oc-time">${relTime(o.createdAt, LANG)}</span></div>
         <div class="oc-status">${sm.label}</div>
         <div class="oc-customer">${window.FMT.escapeHtml(o.customerName || t('notEntered'))}${branch ? ' · ' + window.FMT.escapeHtml(bName(branch)) : ''}</div>
         <div class="oc-items">${window.FMT.escapeHtml(itemsLine)}</div>
         <div class="oc-fulfil">${o.orderType === 'delivery' ? t('delivery') : t('pickup')}</div>
         <div class="review-row" style="font-weight:700;"><span>${t('total')}</span><span class="mono">${fmt(o.totalCents)}</span></div>
+        ${o.status === 'new' || o.status === 'preparing'
+          ? `<span class="oc-eta-badge">${o.etaMinutes ? t('etaBadge', o.etaMinutes) : t('etaUnset')}</span>`
+          : ''}
       </div>`;
-    }).join('');
+    }
+
+    const active = state.orders.filter((o) => o.status === 'new' || o.status === 'preparing' || o.status === 'ready');
+    const cols = {
+      new: active.filter((o) => o.status === 'new'),
+      preparing: active.filter((o) => o.status === 'preparing'),
+      ready: active.filter((o) => o.status === 'ready'),
+    };
+    const colHtml = (list, emptyKey) => list.length ? list.map(card).join('') : `<div class="col-empty">${t(emptyKey)}</div>`;
 
     root.innerHTML = `
-      <div class="branch-select-screen">
-        <div class="bs-head">
-          <h2>${t('myOrdersTitle')}</h2>
-          <div class="sub">${t('myOrdersSub')}</div>
+      <div class="bs-head" style="margin-bottom:16px;">
+        <h2>${t('myOrdersTitle')}</h2>
+        <div class="sub">${t('myOrdersSub')}</div>
+      </div>
+      <div class="board">
+        <div class="col col-new">
+          <div class="col-head"><h3>${t('colNew')}</h3><span class="col-count">${cols.new.length}</span></div>
+          <div class="col-body">${colHtml(cols.new, 'emptyNew')}</div>
         </div>
-        <div class="menu-grid" style="grid-template-columns:repeat(auto-fill,minmax(240px,1fr));">
-          ${cards || `<div class="empty-state">${t('myOrdersEmpty')}</div>`}
+        <div class="col col-prep">
+          <div class="col-head"><h3>${t('colPrep')}</h3><span class="col-count">${cols.preparing.length}</span></div>
+          <div class="col-body">${colHtml(cols.preparing, 'emptyPrep')}</div>
         </div>
-      </div>`;
+        <div class="col col-ready">
+          <div class="col-head"><h3>${t('colReady')}</h3><span class="col-count">${cols.ready.length}</span></div>
+          <div class="col-body">${colHtml(cols.ready, 'emptyReady')}</div>
+        </div>
+      </div>
+      ${active.length === 0 ? `<div class="empty-state" style="margin-top:14px;">${t('myOrdersEmpty')}</div>` : ''}`;
   }
 
   function renderBranchSelect(root) {
